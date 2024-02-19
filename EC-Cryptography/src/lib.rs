@@ -35,26 +35,27 @@ struct FiniteField {}
 
 impl FiniteField {
         // Correctly defined as a static method
-        fn add(c: &BigUint, d: &BigUint, p: &BigUint) -> BigUint {
-            let r = c + d;
-            r % p // Perform modular addition
-        }
-    fn sub(c: BigUint, d: BigUint) -> BigUint {
-        //(c - d) % self.p
-        todo!("Implement the finite field operations")
+    pub fn add(c: &BigUint, d: &BigUint, p: &BigUint) -> BigUint {
+        let r = c + d;
+        return r % p; // Perform modular addition
     }
-    fn mul(c: BigUint, d: BigUint) -> BigUint {
-        // (c * d) % self.p
-        todo!("Implement the finite field operations")
+    pub fn mult(c: &BigUint, d: &BigUint, p: &BigUint) -> BigUint {
+        let r: BigUint = c * d;
+        return r.modpow(&BigUint::from(1u32), p) // Perform modular multiplication
+      
     }
-    fn div(c: BigUint, d: BigUint) -> BigUint {
-        todo!("Implement the inverse addition function")
+    pub fn inv_addition(c: &BigUint, p: &BigUint) -> BigUint {
+        assert!(
+            c < p,
+            "The first number should be less than the second number"
+        );
+        let r = p - c;
+        return r % p;
+        
     }
-    fn inverse_addition(c: BigUint) -> BigUint {
-        todo!("Implement the inverse addition function")
-    }
-    fn inverse_multiplication(c: BigUint) -> BigUint {
-    todo!("Implement the finite field operations")
+    pub fn inverse_multiplication(c: &BigUint, p:&BigUint) -> BigUint {
+        let r = c.modpow(&(p - BigUint::from(2u32)), p);
+        return r;
 }
 }
 
@@ -69,6 +70,57 @@ mod tests {
         let d = BigUint::from(10u32);
         let p = BigUint::from(11u32);
         let r = FiniteField::add(&c, &d, &p);
+        assert_eq!(r, BigUint::from(3u32));
+    }
+    #[test]
+    fn test_mult() {
+        let c = BigUint::from(4u32);
+        let d = BigUint::from(10u32);
+        let p = BigUint::from(11u32);
+        let r = FiniteField::mult(&c, &d, &p);
+        assert_eq!(r, BigUint::from(7u32));
+    }
+    #[test]
+    fn test_mult2() {
+        let c = BigUint::from(4u32);
+        let d = BigUint::from(10u32);
+        let p = BigUint::from(51u32);
+        let r = FiniteField::mult(&c, &d, &p);
+        assert_eq!(r, BigUint::from(40u32));
+    }
+    #[test]
+    fn test_inv_addition() {
+        let c = BigUint::from(4u32);
+        let p = BigUint::from(11u32);
+        let r = FiniteField::inv_addition(&c, &p);
+        assert_eq!(r, BigUint::from(7u32));
+    }
+    #[test]
+    fn test_inv_addition2() {
+        let c = BigUint::from(4u32);
+        let p = BigUint::from(51u32);
+        let r = FiniteField::inv_addition(&c, &p);
+        assert_eq!(r, BigUint::from(47u32));
+    }
+    #[test]
+    #[should_panic]
+    fn test_inv_addition3() {
+        let c = BigUint::from(11u32);
+        let p = BigUint::from(11u32);
+        let r = FiniteField::inv_addition(&c, &p);
+    }
+    #[test]
+    fn test_inverse_multiplication() {
+        let c = BigUint::from(4u32);
+        let p = BigUint::from(11u32);
+        let r = FiniteField::inverse_multiplication(&c, &p);
+        assert_eq!(r, BigUint::from(3u32));
+    }
+    #[test]
+    fn test_inverse_multiplication2() {
+        let c = BigUint::from(4u32);
+        let p = BigUint::from(11u32);
+        let r = FiniteField::inverse_multiplication(&c, &p);
         assert_eq!(r, BigUint::from(3u32));
     }
 }
