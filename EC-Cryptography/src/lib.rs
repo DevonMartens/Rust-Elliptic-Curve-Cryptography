@@ -2,10 +2,8 @@
 use num_bigint::BigUint;
 
 
-
-
 // Point on the elliptic curve
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 enum Point {
     Coordinate(BigUint, BigUint),
     Identity,
@@ -45,46 +43,43 @@ impl EllipticCurve {
                 let x1minusx3 = FiniteField::subtract(x1, &x3, &self.p);
                 let sx1minusx3 = FiniteField::mult(&s, &x1minusx3, &self.p);
                 let y3 = FiniteField::subtract(&sx1minusx3, &y1, &self.p);
-                return Point::Coordinate(x3, y3);
-                // if x1 == x2 && y1 != y2 {
-                //     return Point::Identity;
-                // }
-                // if x1 == x2 && y1 == y2 {
-                //     return self.double(c);
-                // }
-                // let lambda = if x1 == x2 {
-                //     (BigUint::from(3u32) * x1.pow(BigUint::from(2u32)) + &self.a) * FiniteField::inverse_multiplication(&BigUint::from(2u32) * y1, &self.p)
-                // } else {
-                //     (y2 - y1) * FiniteField::inverse_multiplication(&(x2 - x1), &self.p)
-                // };
-                // let x3 = lambda.pow(BigUint::from(2u32)) - x1 - x2;
-                // let y3 = lambda * (x1 - x3) - y1;
-                // return Point::Coordinate(x3, y3);
+                Point::Coordinate(x3 % &self.p, y3 % &self.p)
             }
         }
-
     }
-
     fn double(c: &Point){
         todo!("Implement the double function")
+
     }
-    fn scalar_mul(c: &Point, n: BigUint) -> Point {
-        todo!("Implement the multiply function")
+    fn scalar_mul(&self, c: &Point, n: BigUint) -> Point {
+        let mut r = Point::Identity;
+        let mut m = c.clone();
+        let mut i = n.clone();
+        while i > BigUint::from(0u32) {
+            if i.clone()  % BigUint::from(2u32) == BigUint::from(1u32) {
+                r = self.add(&r, &m);
+            }
+            m = self.add(&m, &m);
+            i = i % BigUint::from(2u32);
+        }
+        return r;
     }
-    fn is_on_curve(&self, c: &Point) -> bool {
-        // y^2 = x^3 + ax + b
-        let y2 = match c {
-           Point::Coordinate(x, y) => {
-            let y2 = y.modpow(&BigUint::from(2u32), &self.p);
-            let x3 = x.modpow(&BigUint::from(3u32), &self.p);
-            let ax = &self.a * x;
-            y2 == x3 + ax + &self.b;
-           }
-            Point::Identity => return false,
-        };
-        todo!("Implement the is_on_curve function")
+    pub fn is_on_curve(&self, a: &Point) -> bool {
+        match a {
+            Point::Coordinate(x, y) => {
+                let y2 = y.modpow(&BigUint::from(2u32), &self.p);
+                let x3 = x.modpow(&BigUint::from(3u32), &self.p);
+                let ax = FiniteField::mult(&self.a, x, &self.p);
+                let x3plusax = FiniteField::add(&x3, &ax, &self.p);
+
+                y2 == FiniteField::add(&x3plusax, &self.b, &self.p)
+            }
+            Point::Identity => true,
+        }
     }
+    
 }
+
 
 struct FiniteField {}
 
@@ -118,8 +113,9 @@ impl FiniteField {
         return r;
 }
     pub fn subtract(c: &BigUint, d: &BigUint, p: &BigUint) -> BigUint {
-        let r = c - d;
-        return r % p;
+        let d_inv = FiniteField::inv_addition(d, p);
+        let r = FiniteField::add(c, &d_inv, p);
+        return r ;
     }
     pub fn divide(c: &BigUint, d: &BigUint, p: &BigUint) -> BigUint {
         let d_inv = FiniteField::inverse_multiplication(d, p);
@@ -176,7 +172,7 @@ mod tests {
     fn test_inv_addition3() {
         let c = BigUint::from(11u32);
         let p = BigUint::from(11u32);
-        let r = FiniteField::inv_addition(&c, &p);
+        let _r = FiniteField::inv_addition(&c, &p);
     }
     #[test]
     fn test_inverse_multiplication() {
@@ -192,5 +188,23 @@ mod tests {
         let r = FiniteField::inverse_multiplication(&c, &p);
         assert_eq!(r, BigUint::from(3u32));
     }
+    #[test]
 
+    fn test_ec_point_addition() {
+        let a = BigUint::from(2u32);
+        let b = BigUint::from(2u32);
+        let p = BigUint::from(17u32);
+        let curve = EllipticCurve { a, b, p };
+    
+        // Points must be on the curve. Assuming these are valid for demonstration.
+        let c = Point::Coordinate(BigUint::from(6u32), BigUint::from(3u32));
+      //  let d = Point::Coordinate(BigUint::from(5u32), BigUint::from(1u32));
+      let d = Point::Identity;
+    
+        // Expected result after addition. This needs to be a valid point on the curve after adding c and d.
+        let pr = c.clone();
+    
+        let res = curve.add(&c, &d);
+        assert_eq!(res, pr);
+    }
 }
