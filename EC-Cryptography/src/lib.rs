@@ -5,6 +5,7 @@ use num_bigint::BigUint;
 
 
 // Point on the elliptic curve
+#[derive(PartialEq, Clone)]
 enum Point {
     Coordinate(BigUint, BigUint),
     Identity,
@@ -28,28 +29,37 @@ impl EllipticCurve {
             self.is_on_curve(d),
             "The second point is not on the curve"
         );
-        match (c,d) => {
-            (Point::Identity, _) => d,
-            (_, Point::Identity) => c,
+        match (c,d) {
+            (Point::Identity, _) => d.clone(),
+            (_, Point::Identity) => c.clone(),
             (Point::Coordinate(x1, y1), Point::Coordinate(x2, y2)) => {
                 // s= (y2-y1)/(x2-x1) mod p
                 // x3 = s^2 - x1 - x2 mod p
                 // y3 = s(x1-x3) - y1  mod p
-                let s: () =
-                if x1 == x2 && y1 != y2 {
-                    return Point::Identity;
-                }
-                if x1 == x2 && y1 == y2 {
-                    return self.double(c);
-                }
-                let lambda = if x1 == x2 {
-                    (BigUint::from(3u32) * x1.pow(BigUint::from(2u32)) + &self.a) * FiniteField::inverse_multiplication(&BigUint::from(2u32) * y1, &self.p)
-                } else {
-                    (y2 - y1) * FiniteField::inverse_multiplication(&(x2 - x1), &self.p)
-                };
-                let x3 = lambda.pow(BigUint::from(2u32)) - x1 - x2;
-                let y3 = lambda * (x1 - x3) - y1;
+                let y2minusy1 = FiniteField::subtract(y2, y1, &self.p);
+                let x2minusx1 = FiniteField::subtract(x2, x1, &self.p);
+                let s = FiniteField::divide(&y2minusy1, &x2minusx1, &self.p);
+                let s2 = s.modpow(&BigUint::from(2u32), &self.p); 
+                let s2minusx1 = FiniteField::subtract(&s2, x1, &self.p);
+                let x3 = FiniteField::subtract(&s2minusx1, x2, &self.p);
+                let x1minusx3 = FiniteField::subtract(x1, &x3, &self.p);
+                let sx1minusx3 = FiniteField::mult(&s, &x1minusx3, &self.p);
+                let y3 = FiniteField::subtract(&sx1minusx3, &y1, &self.p);
                 return Point::Coordinate(x3, y3);
+                // if x1 == x2 && y1 != y2 {
+                //     return Point::Identity;
+                // }
+                // if x1 == x2 && y1 == y2 {
+                //     return self.double(c);
+                // }
+                // let lambda = if x1 == x2 {
+                //     (BigUint::from(3u32) * x1.pow(BigUint::from(2u32)) + &self.a) * FiniteField::inverse_multiplication(&BigUint::from(2u32) * y1, &self.p)
+                // } else {
+                //     (y2 - y1) * FiniteField::inverse_multiplication(&(x2 - x1), &self.p)
+                // };
+                // let x3 = lambda.pow(BigUint::from(2u32)) - x1 - x2;
+                // let y3 = lambda * (x1 - x3) - y1;
+                // return Point::Coordinate(x3, y3);
             }
         }
 
@@ -61,13 +71,13 @@ impl EllipticCurve {
     fn scalar_mul(c: &Point, n: BigUint) -> Point {
         todo!("Implement the multiply function")
     }
-    fn is_on_curve(c: &Point) -> bool {
+    fn is_on_curve(&self, c: &Point) -> bool {
         // y^2 = x^3 + ax + b
         let y2 = match c {
            Point::Coordinate(x, y) => {
-            let y2 = y.modpow(&BigUint::from(2u32), &this.p)
-            let x3 = x.modpow(&BigUint::from(3u32), &this.p)
-            let ax = &self.a * x
+            let y2 = y.modpow(&BigUint::from(2u32), &self.p);
+            let x3 = x.modpow(&BigUint::from(3u32), &self.p);
+            let ax = &self.a * x;
             y2 == x3 + ax + &self.b;
            }
             Point::Identity => return false,
@@ -100,6 +110,8 @@ impl FiniteField {
     }
     pub fn inverse_addition(c: &BigUint, d: &BigUint, p: &BigUint) -> BigUint {
         let d_inv = FiniteField::inv_addition(d, p);
+        let r = FiniteField::add(c, &d_inv, p);
+        return r;
     }
     pub fn inverse_multiplication(c: &BigUint, p:&BigUint) -> BigUint {
         let r = c.modpow(&(p - BigUint::from(2u32)), p);
@@ -108,6 +120,11 @@ impl FiniteField {
     pub fn subtract(c: &BigUint, d: &BigUint, p: &BigUint) -> BigUint {
         let r = c - d;
         return r % p;
+    }
+    pub fn divide(c: &BigUint, d: &BigUint, p: &BigUint) -> BigUint {
+        let d_inv = FiniteField::inverse_multiplication(d, p);
+        let r = FiniteField::add(c, &d_inv, p);
+        return r;
     }
 }
 
@@ -175,6 +192,5 @@ mod tests {
         let r = FiniteField::inverse_multiplication(&c, &p);
         assert_eq!(r, BigUint::from(3u32));
     }
-    #[test]
 
 }
