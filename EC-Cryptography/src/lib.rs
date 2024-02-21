@@ -51,8 +51,41 @@ impl EllipticCurve {
             }
         }
     }
-    fn double(c: &Point){
-        todo!("Implement the double function")
+    fn double(&self, c: &Point){
+        assert!(
+            self.is_on_curve(c),
+            "The first point is not on the curve"
+        );
+        match c {
+            Point::Identity  => Point::Identity,
+            Point::Coordinate(x1, y1) => {
+                let y1plusy2 = FiniteField::add(&y1, &y2, &self.p);
+                if x1 == x2 && y1plusy2 == BigUint::from(0u32) {
+                    return Point::Identity;
+                }
+                // s= (3 * X1^2 + a) / (2 * y1) mod p
+                // x3 = s^2 - 2 * x1 mod p
+                // y3 = s(x1-x3) - y1  mod p
+                let numerator = x1.modpow(&BigUint::from(2u32), &self.p);
+                let numerator = FiniteField::mult(&BigUint::from(3u32), &numerator, &self.p);
+                let numerator = FiniteField::add(&numerator, &self.a, &self.p);
+
+                let denominator = FiniteField::mult(&BigUint::from(2u32), &y1, &self.p);
+
+                let x2minusx1 = FiniteField::subtract(x2, x1, &self.p);
+                let s = FiniteField::divide(&numerator, &denominator, &self.p);
+
+                let s2 = s.modpow(&BigUint::from(2u32), &self.p); 
+                let s2minusx1 = FiniteField::subtract(&s2, x1, &self.p);
+                let x3 = FiniteField::subtract(&s2minusx1, x2, &self.p);
+                let x1minusx3 = FiniteField::subtract(x1, &x3, &self.p);
+                let sx1minusx3 = FiniteField::mult(&s, &x1minusx3, &self.p);
+                let y3 = FiniteField::subtract(&sx1minusx3, &y1, &self.p);
+                Point::Coordinate(x3 % &self.p, y3 % &self.p)
+            }
+        }
+    }
+        
 
     }
     fn scalar_mul(&self, c: &Point, n: BigUint) -> Point {
@@ -243,6 +276,23 @@ mod tests {
         let pr = Point::Identity;
     
         let res = curve.add(&c, &d);
+        assert_eq!(res, pr);
+    }
+
+    #[test]
+    fn test_double(){
+        let a = BigUint::from(2u32);
+        let b = BigUint::from(2u32);
+        let p = BigUint::from(17u32);
+        let curve = EllipticCurve { a, b, p };
+    
+        // Points must be on the curve. Assuming these are valid for demonstration.
+        let c = Point::Coordinate(BigUint::from(5u32), BigUint::from(1u32));
+    
+        // Expected result after addition. This needs to be a valid point on the curve after adding c and d.
+        let pr = Point::Coordinate(BigUint::from(3u32), BigUint::from(1u32));
+    
+        let res = curve.double(&c);
         assert_eq!(res, pr);
     }
     
