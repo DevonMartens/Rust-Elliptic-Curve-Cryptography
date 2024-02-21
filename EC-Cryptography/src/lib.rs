@@ -31,6 +31,10 @@ impl EllipticCurve {
             (Point::Identity, _) => d.clone(),
             (_, Point::Identity) => c.clone(),
             (Point::Coordinate(x1, y1), Point::Coordinate(x2, y2)) => {
+                let y1plusy2 = FiniteField::add(&y1, &y2, &self.p);
+                if x1 == x2 && y1plusy2 == BigUint::from(0u32) {
+                    return Point::Identity;
+                }
                 // s= (y2-y1)/(x2-x1) mod p
                 // x3 = s^2 - x1 - x2 mod p
                 // y3 = s(x1-x3) - y1  mod p
@@ -207,4 +211,39 @@ mod tests {
         let res = curve.add(&c, &d);
         assert_eq!(res, pr);
     }
+    // #[test]
+    // fn test_ec_point_addition2() {
+    //     let a = BigUint::from(2u32);
+    //     let b = BigUint::from(2u32);
+    //     let p = BigUint::from(17u32);
+    //     let curve = EllipticCurve { a, b, p };
+    
+    //     // Points must be on the curve. Assuming these are valid for demonstration.
+    //     let c = Point::Coordinate(BigUint::from(6u32), BigUint::from(3u32));
+    //     let d = Point::Coordinate(BigUint::from(5u32), BigUint::from(1u32));
+    
+    //     // Expected result after addition. This needs to be a valid point on the curve after adding c and d.
+    //     let pr = Point::Coordinate(BigUint::from(3u32), BigUint::from(1u32));
+    
+    //     let res = curve.add(&c, &d);
+    //     assert_eq!(res, pr);
+    // }
+    #[test]
+    fn test_ec_point_addition3() {
+        let a = BigUint::from(2u32);
+        let b = BigUint::from(2u32);
+        let p = BigUint::from(17u32);
+        let curve = EllipticCurve { a, b, p };
+    
+        // Points must be on the curve. Assuming these are valid for demonstration.
+        let c = Point::Coordinate(BigUint::from(5u32), BigUint::from(16u32));
+        let d = Point::Coordinate(BigUint::from(5u32), BigUint::from(1u32));
+    
+        // Expected result after addition. This needs to be a valid point on the curve after adding c and d.
+        let pr = Point::Identity;
+    
+        let res = curve.add(&c, &d);
+        assert_eq!(res, pr);
+    }
+    
 }
