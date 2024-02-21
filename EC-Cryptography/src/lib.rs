@@ -51,7 +51,7 @@ impl EllipticCurve {
             }
         }
     }
-    fn double(&self, c: &Point){
+    fn double(&self, c: &Point) -> Point {
         assert!(
             self.is_on_curve(c),
             "The first point is not on the curve"
@@ -59,10 +59,10 @@ impl EllipticCurve {
         match c {
             Point::Identity  => Point::Identity,
             Point::Coordinate(x1, y1) => {
-                let y1plusy2 = FiniteField::add(&y1, &y2, &self.p);
-                if x1 == x2 && y1plusy2 == BigUint::from(0u32) {
-                    return Point::Identity;
-                }
+                // let y1plusy2 = FiniteField::add(&y1, &y2, &self.p);
+                // if x1 == x2 && y1plusy2 == BigUint::from(0u32) {
+                //     return Point::Identity;
+                // }
                 // s= (3 * X1^2 + a) / (2 * y1) mod p
                 // x3 = s^2 - 2 * x1 mod p
                 // y3 = s(x1-x3) - y1  mod p
@@ -72,18 +72,30 @@ impl EllipticCurve {
 
                 let denominator = FiniteField::mult(&BigUint::from(2u32), &y1, &self.p);
 
-                let x2minusx1 = FiniteField::subtract(x2, x1, &self.p);
-                let s = FiniteField::divide(&numerator, &denominator, &self.p);
+             //  let x2minusx1: BigUint = FiniteField::subtract(&x2, &x1, &self.p);
+                let s: BigUint = FiniteField::divide(&numerator, &denominator, &self.p);
 
                 let s2 = s.modpow(&BigUint::from(2u32), &self.p); 
-                let s2minusx1 = FiniteField::subtract(&s2, x1, &self.p);
-                let x3 = FiniteField::subtract(&s2minusx1, x2, &self.p);
-                let x1minusx3 = FiniteField::subtract(x1, &x3, &self.p);
+                let s2minusx1: BigUint = FiniteField::subtract(&s2, &x1, &self.p);
+                let x3 = FiniteField::subtract(&s2minusx1, &x1, &self.p);
+                let x1minusx3 = FiniteField::subtract(&x1, &x3, &self.p);
                 let sx1minusx3 = FiniteField::mult(&s, &x1minusx3, &self.p);
                 let y3 = FiniteField::subtract(&sx1minusx3, &y1, &self.p);
-                Point::Coordinate(x3 % &self.p, y3 % &self.p)
+                return Point::Coordinate(x3, y3);
             }
         }
+    }
+        fn computex3y3(&self, x1: &BigUint, y1:&BigUint, x2:&BigUint,   s: &BigUint) -> Point {
+        let y2minusy1 = FiniteField::subtract(y2, y1, &self.p);
+        let x2minusx1 = FiniteField::subtract(x2, x1, &self.p);
+        let s = FiniteField::divide(&y2minusy1, &x2minusx1, &self.p);
+        let s2 = s.modpow(&BigUint::from(2u32), &self.p); 
+        let s2minusx1 = FiniteField::subtract(&s2, x1, &self.p);
+        let x3 = FiniteField::subtract(&s2minusx1, x2, &self.p);
+        let x1minusx3 = FiniteField::subtract(x1, &x3, &self.p);
+        let sx1minusx3 = FiniteField::mult(&s, &x1minusx3, &self.p);
+        let y3 = FiniteField::subtract(&sx1minusx3, &y1, &self.p);
+        Point::Coordinate(x3 % &self.p, y3 % &self.p)
     }
         
 
@@ -290,9 +302,9 @@ mod tests {
         let c = Point::Coordinate(BigUint::from(5u32), BigUint::from(1u32));
     
         // Expected result after addition. This needs to be a valid point on the curve after adding c and d.
-        let pr = Point::Coordinate(BigUint::from(3u32), BigUint::from(1u32));
+        let pr = Point::Coordinate(BigUint::from(6u32), BigUint::from(3u32));
     
-        let res = curve.double(&c);
+        let res: Point = curve.double(&c);
         assert_eq!(res, pr);
     }
     
